@@ -38,6 +38,9 @@ src = ["src"]
 select = ["E", "F", "B", "I", "UP", "N", "SIM", "C4", "TID", "RET", "S", "BLE", "TRY"]
 ignore = ["N805", "UP006", "UP035", "UP045", "TID252", "Q000", "Q003", "E501", "UP046"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+
 [tool.ruff.lint.isort]
 combine-as-imports = true
 known-first-party = ["src"]
@@ -51,6 +54,8 @@ path = "src/__meta__.py"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 addopts = "-v --strict-markers"
 

@@ -3,7 +3,6 @@ import hmac
 
 from src.api.utils.signature import verify_tribute_signature
 
-
 SECRET = 'test-secret'
 
 
