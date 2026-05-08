@@ -65,6 +65,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         allowed_updates=dispatcher.resolve_used_update_types(),
         drop_pending_updates=True,
     )
+    info = await bot.get_webhook_info()
+    logger.info(
+        'Webhook set: url={}, pending={}, last_error={}, allowed={}',
+        info.url,
+        info.pending_update_count,
+        info.last_error_message or 'none',
+        info.allowed_updates,
+    )
 
     notification_queue = NotificationQueueService(bot, redis)
     app.state.notification_queue = notification_queue
@@ -95,6 +103,11 @@ setup_logging(debug=env.app.debug)
 app = FastAPI(lifespan=lifespan)
 app.include_router(telegram.router)
 app.include_router(tribute.router)
+
+
+@app.get('/')
+async def healthcheck() -> dict[str, str]:
+    return {'status': 'ok', 'app': __app_name__, 'version': __version__}
 
 
 def main() -> None:
