@@ -6,6 +6,7 @@ from redis.asyncio import Redis
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED
 
 from src.common import env
+from src.services import DonationService, FundraiserService, NotificationQueueService
 
 from .utils import verify_tribute_signature as _verify
 
@@ -40,15 +41,13 @@ async def verify_tribute_body(request: Request) -> bytes:
     return body
 
 
-def get_donation_service(bot: Annotated[Bot, Depends(get_bot)]):
-    from src.services import DonationService
+def get_donation_service(bot: Annotated[Bot, Depends(get_bot)]) -> DonationService:
     return DonationService(bot)
 
 
-def get_notification_queue(request: Request):
+def get_notification_queue(request: Request) -> NotificationQueueService:
     return request.app.state.notification_queue
 
 
-def get_fundraiser_service(bot: Annotated[Bot, Depends(get_bot)]):
-    from src.services import FundraiserService
+def get_fundraiser_service(bot: Annotated[Bot, Depends(get_bot)]) -> FundraiserService:
     return FundraiserService(bot)

@@ -6,6 +6,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import DefaultKeyBuilder, RedisStorage
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from granian import Granian
 from granian.constants import Interfaces
@@ -96,6 +98,8 @@ app.include_router(tribute.router)
 
 
 def main() -> None:
+    command.upgrade(Config('alembic.ini'), 'head')
+
     server = Granian(
         target='src.main:app',
         address=env.app.host,

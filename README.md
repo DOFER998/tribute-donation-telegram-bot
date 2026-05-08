@@ -49,7 +49,7 @@ Python 3.13, FastAPI + Granian, aiogram 3, SQLModel + asyncpg, Redis, Alembic, A
    docker compose -f docker-compose.prod.yml up -d
    ```
 
-Образ при старте сам прогоняет `alembic upgrade head`, потом запускает бота — это делает `src/__main__.py`.
+Образ при старте сам прогоняет `alembic upgrade head`, потом запускает бота — это делает `main()` в `src/main.py`.
 
 Tribute шлёт вебхук на `https://${APP__DOMAIN}/tribute`. Telegram — на `https://${APP__DOMAIN}/telegram`.
 

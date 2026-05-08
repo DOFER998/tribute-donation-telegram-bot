@@ -14,4 +14,4 @@ COPY src/ src/
 COPY alembic/ alembic/
 COPY alembic.ini ./
 
-CMD ["uv", "run", "python", "-m", "src"]
+CMD ["uv", "run", "python", "-m", "src.main"]
