@@ -2,6 +2,7 @@ from typing import Annotated
 
 from aiogram import Bot, Dispatcher
 from fastapi import Depends, HTTPException, Request
+from loguru import logger
 from redis.asyncio import Redis
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED
 
@@ -31,11 +32,20 @@ async def verify_telegram_secret(request: Request) -> None:
 
 async def verify_tribute_body(request: Request) -> bytes:
     body = await request.body()
+    sig = request.headers.get('trbt-signature')
+    logger.info(
+        'Tribute webhook hit: body_len={}, has_sig={}, peer={}',
+        len(body),
+        sig is not None,
+        request.client.host if request.client else 'unknown',
+    )
+
     if not body:
+        logger.warning('Tribute webhook rejected: empty body')
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Empty body')
 
-    sig = request.headers.get('trbt-signature')
     if not _verify(body, sig, env.tribute.api_key.get_secret_value()):
+        logger.warning('Tribute webhook rejected: invalid signature (sig={})', sig)
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail='Invalid signature')
 
     return body
