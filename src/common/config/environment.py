@@ -4,7 +4,6 @@ from .types import (
     BaseEnvironment,
     BotTypeConfig,
     DigestTypeConfig,
-    FundraiserTypeConfig,
     PostgresTypeConfig,
     RedisTypeConfig,
     TributeTypeConfig,
@@ -17,7 +16,6 @@ class Environment(BaseEnvironment):
     postgres: PostgresTypeConfig
     redis: RedisTypeConfig
     tribute: TributeTypeConfig
-    fundraiser: FundraiserTypeConfig
     digest: DigestTypeConfig
     admin: AdminTypeConfig
 

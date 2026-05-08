@@ -27,7 +27,11 @@ async def render_progress_message(fundraiser: Fundraiser) -> str:
 
 
 async def render_fundraiser_announcement(fundraiser: Fundraiser) -> str:
-    return await render('fundraiser_announcement.html.j2', fundraiser=fundraiser)
+    return await render(
+        'fundraiser_announcement.html.j2',
+        fundraiser=fundraiser,
+        end_date=format_date_moscow(fundraiser.end_date),
+    )
 
 
 async def render_completed_message(fundraiser: Fundraiser) -> str:
