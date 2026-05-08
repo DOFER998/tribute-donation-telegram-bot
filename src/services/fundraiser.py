@@ -4,7 +4,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 
-from src.common import MOSCOW_TZ, env, render
+from src.common import MOSCOW_TZ, env, format_date_moscow, render
 from src.database import Fundraiser, FundraiserRepository, FundraiserStatus, async_session
 from src.keyboards import get_donate_keyboard
 
@@ -21,7 +21,13 @@ async def render_progress_message(fundraiser: Fundraiser) -> str:
         'fundraiser_progress.html.j2',
         fundraiser=fundraiser,
         remaining=remaining,
+        start_date=format_date_moscow(fundraiser.start_date),
+        end_date=format_date_moscow(fundraiser.end_date),
     )
+
+
+async def render_fundraiser_announcement(fundraiser: Fundraiser) -> str:
+    return await render('fundraiser_announcement.html.j2', fundraiser=fundraiser)
 
 
 async def render_completed_message(fundraiser: Fundraiser) -> str:
@@ -61,11 +67,18 @@ class FundraiserService:
                 await repo.update_amount(fundraiser_id, initial)
                 f.current_amount = initial
 
-        text = await render_progress_message(f)
+        await self.bot.send_message(
+            chat_id=env.tribute.alert_group_id,
+            message_thread_id=env.tribute.fundraiser_topic_id,
+            text=await render_fundraiser_announcement(f),
+            reply_markup=get_donate_keyboard(env.tribute.donate_link),
+        )
+
+        progress_text = await render_progress_message(f)
         msg = await self.bot.send_message(
             chat_id=env.tribute.alert_group_id,
             message_thread_id=env.tribute.fundraiser_topic_id,
-            text=text,
+            text=progress_text,
             reply_markup=get_donate_keyboard(env.tribute.donate_link),
         )
         await self.bot.pin_chat_message(
