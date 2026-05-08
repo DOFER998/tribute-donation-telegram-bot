@@ -6,8 +6,8 @@ from .base import BaseTypeConfig
 
 class AppTypeConfig(BaseTypeConfig):
     domain: str
-    host: str
-    port: int
+    host: str = '0.0.0.0'  # noqa: S104
+    port: int = 9090
     secret_token: SecretStr
     debug: bool = False
 

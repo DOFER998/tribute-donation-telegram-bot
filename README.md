@@ -5,64 +5,74 @@
 ## Возможности
 
 - Приём вебхуков Tribute с HMAC-проверкой
-- Запись каждого доната в Postgres с полной информацией (кто, сумма, комментарий)
-- Алерты в группу жильцов в выделенный топик
-- Автообновляемый закреп с прогрессом сбора
-- По достижении цели — уведомление в общий чат + DM админам
-- Ежедневная сводка админам
-- Команды `/start`, `/stats`, `/fundraiser_create`, `/fundraiser_close`, `/donations_csv`
+- Запись каждого взноса в Postgres с полной информацией (кто, сумма, комментарий)
+- Алерты в группу жильцов в топик сбора
+- Автообновляемый закреп с прогрессом
+- По достижении цели — уведомление + DM админам
+- Ежедневное публичное напоминание (фото-баннер + прогресс)
+- Единая админ-команда `/fundraiser` с интерактивным меню (создание/закрытие/CSV)
+- FSM-флоу создания сбора через кнопки
 
 ## Стек
 
-Python 3.13, FastAPI + Granian, aiogram 3, SQLModel + asyncpg, Redis, Alembic, APScheduler.
+Python 3.13, FastAPI + Granian, aiogram 3, SQLModel + asyncpg, Redis, Alembic, APScheduler, Jinja2.
 
 ## Запуск локально
 
-1. Скопировать `.env.example` в `.env` и заполнить.
-2. Поднять postgres + redis:
-   ```bash
-   docker compose -f docker-compose.local.yml up -d
-   ```
-3. Применить миграции:
-   ```bash
-   uv run alembic upgrade head
-   ```
-4. Запустить бота:
-   ```bash
-   uv run python -m src.main
-   ```
+Для локального запуска `make run` бот стартует **вне** контейнера (host-машина), поэтому Postgres/Redis смотрят на `localhost`. В `.env` помимо обязательных значений заполни:
+
+```
+POSTGRES__HOST=localhost
+REDIS__HOST=localhost
+```
+
+Шаги:
+
+1. Скопировать `.env.example` → `.env`, заполнить.
+2. Поднять postgres + redis: `make up`
+3. Запустить бота: `make run` (миграции прогоняются автоматически)
 
 ## Деплой (production)
 
 Прод запускается из готового образа из GHCR — клонировать код на сервер не нужно.
 
-На сервере:
+На сервере достаточно двух файлов:
 
-1. Положить рядом `docker-compose.prod.yml` и `.env` (заполненный).
-2. В `.env` указать образ:
-   ```
-   BOT_IMAGE=ghcr.io/<owner>/<repo>:latest
-   ```
-3. Запустить:
-   ```bash
-   docker compose -f docker-compose.prod.yml pull
-   docker compose -f docker-compose.prod.yml up -d
-   ```
+1. `docker-compose.prod.yml`
+2. `.env` (только секреты + per-deploy значения, см. `.env.example`)
 
-Образ при старте сам прогоняет `alembic upgrade head`, потом запускает бота — это делает `main()` в `src/main.py`.
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
 
-Tribute шлёт вебхук на `https://${APP__DOMAIN}/tribute`. Telegram — на `https://${APP__DOMAIN}/telegram`.
+Образ при старте сам прогоняет `alembic upgrade head`, потом запускает Granian.
+
+Tribute шлёт вебхук на `https://${APP__DOMAIN}/tribute`, Telegram — на `https://${APP__DOMAIN}/telegram`.
+
+### Что в `.env` для прода
+
+Только то, что нельзя угадать или что секретно:
+
+- `BOT__TOKEN`
+- `APP__DOMAIN`, `APP__SECRET_TOKEN`
+- `POSTGRES__PASSWORD`, `REDIS__PASSWORD`
+- `TRIBUTE__API_KEY`, `TRIBUTE__DONATE_LINK`, `TRIBUTE__ALERT_GROUP_ID`
+- `ADMIN__IDS`
+
+Хосты, порты, БД-имя, юзер, и пр. — захардкожены в `docker-compose.prod.yml` и/или дефолтны в pydantic-конфиге.
 
 ### Сборка образа в CI
 
 `.github/workflows/docker-publish.yml` собирает и пушит образ в `ghcr.io/<owner>/<repo>` при пуше в `main` и при создании тегов `v*`. Никаких секретов не нужно — используется `GITHUB_TOKEN`.
 
-Если ghcr-пакет приватный, после первого пуша зайти в Settings → Packages и сделать его доступным или дать read-доступ деплой-машине через PAT.
+Если ghcr-пакет приватный, после первого пуша зайти в Settings → Packages и сделать его публичным или дать read-доступ деплой-машине через PAT.
 
-## Тесты
+## Тесты и проверки
 
 ```bash
-make test
+make check        # ruff + ty + pytest
+make test         # pytest с coverage
+make typecheck    # ty (Astral type checker)
+make lint         # ruff
 ```
-
-24 теста, покрытие ~46% (security-critical пути закрыты: HMAC, парсинг payload, идемпотентность).

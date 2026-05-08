@@ -4,9 +4,9 @@ from .base import BaseTypeConfig
 
 
 class RedisTypeConfig(BaseTypeConfig):
-    host: str
-    port: int
-    name: int
+    host: str = 'redis'
+    port: int = 6379
+    name: int = 0
     password: SecretStr
 
     @property

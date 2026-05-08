@@ -4,11 +4,11 @@ from .base import BaseTypeConfig
 
 
 class PostgresTypeConfig(BaseTypeConfig):
-    host: str
-    port: int
-    user: str
+    host: str = 'postgres'
+    port: int = 5432
+    user: str = 'fundraiser'
     password: SecretStr
-    database: str
+    database: str = 'fundraiser_bot'
 
     @property
     def dsn(self) -> str:
