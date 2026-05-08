@@ -68,9 +68,7 @@ async def cmd_fundraiser(message: Message, state: FSMContext) -> None:
     await _show_menu(message, state)
 
 
-@router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.START_CREATE)
-)
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.START_CREATE))
 async def on_start_create(callback: CallbackQuery, state: FSMContext) -> None:
     msg = _accessible_message(callback)
     if msg is None:
@@ -220,9 +218,7 @@ async def cancel_create(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-@router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.BACK_TO_MENU)
-)
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.BACK_TO_MENU))
 async def on_back_to_menu(callback: CallbackQuery, state: FSMContext) -> None:
     msg = _accessible_message(callback)
     if msg is None:
@@ -233,9 +229,7 @@ async def on_back_to_menu(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-@router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_REQUEST)
-)
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_REQUEST))
 async def on_close_request(callback: CallbackQuery) -> None:
     msg = _accessible_message(callback)
     if msg is None:
@@ -259,9 +253,7 @@ async def on_close_request(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-@router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_CONFIRM)
-)
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_CONFIRM))
 async def on_close_confirm(callback: CallbackQuery, bot: Bot) -> None:
     msg = _accessible_message(callback)
     if msg is None:
@@ -282,17 +274,13 @@ async def on_close_confirm(callback: CallbackQuery, bot: Bot) -> None:
     await service.close_fundraiser(fundraiser_id, FundraiserStatus.CANCELLED)
 
     await msg.edit_reply_markup(reply_markup=None)
-    await msg.answer(
-        await render('fundraiser_closed_ok.html.j2', fundraiser_id=fundraiser_id)
-    )
+    await msg.answer(await render('fundraiser_closed_ok.html.j2', fundraiser_id=fundraiser_id))
     text, kb = await _render_menu(None)
     await msg.answer(text, reply_markup=kb)
     await callback.answer()
 
 
-@router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.EXPORT_CSV)
-)
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.EXPORT_CSV))
 async def on_export_csv(callback: CallbackQuery) -> None:
     msg = _accessible_message(callback)
     if msg is None:

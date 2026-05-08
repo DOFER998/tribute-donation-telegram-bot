@@ -123,7 +123,9 @@ class FundraiserService:
                 logger.warning('Failed to update progress message: {}', e)
 
             if updated.current_amount >= updated.target_amount:
-                await self.close_fundraiser(require_fundraiser_id(updated), FundraiserStatus.COMPLETED)
+                await self.close_fundraiser(
+                    require_fundraiser_id(updated), FundraiserStatus.COMPLETED
+                )
 
     async def close_fundraiser(
         self,

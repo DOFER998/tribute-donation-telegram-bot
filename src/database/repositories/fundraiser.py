@@ -63,7 +63,9 @@ class FundraiserRepository:
             await self.session.refresh(f)
         return f
 
-    async def close(self, fundraiser_id: int, status: str = FundraiserStatus.COMPLETED) -> Fundraiser | None:
+    async def close(
+        self, fundraiser_id: int, status: str = FundraiserStatus.COMPLETED
+    ) -> Fundraiser | None:
         f = await self.get_by_id(fundraiser_id)
         if f:
             f.status = status
@@ -72,7 +74,9 @@ class FundraiserRepository:
         return f
 
     async def get_donations_sum_from_date(self, from_date: datetime) -> int:
-        q = select(func.coalesce(func.sum(Donation.amount), 0)).where(Donation.created_at >= from_date)
+        q = select(func.coalesce(func.sum(Donation.amount), 0)).where(
+            Donation.created_at >= from_date
+        )
         return (await self.session.execute(q)).scalar() or 0
 
     async def get_expired_active(self, now: datetime) -> list[Fundraiser]:

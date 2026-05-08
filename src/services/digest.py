@@ -48,8 +48,11 @@ class DigestService:
             logger.warning('Failed to send daily announcement: {}', e)
             return
 
-        logger.info('Daily announcement sent: {} ₽ / {} ₽',
-                    fundraiser.current_amount, fundraiser.target_amount)
+        logger.info(
+            'Daily announcement sent: {} ₽ / {} ₽',
+            fundraiser.current_amount,
+            fundraiser.target_amount,
+        )
 
 
 __all__ = ['DigestService', 'render_announcement']

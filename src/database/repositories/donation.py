@@ -45,7 +45,5 @@ class DonationRepository:
         return Donation(**dict(row._mapping))
 
     async def get_all(self) -> list[Donation]:
-        result = await self.session.execute(
-            select(Donation).order_by(Donation.created_at.desc())
-        )
+        result = await self.session.execute(select(Donation).order_by(Donation.created_at.desc()))
         return list(result.scalars().all())
