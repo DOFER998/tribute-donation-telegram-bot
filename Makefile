@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck check test up down migrate revision
+.PHONY: install lint format typecheck check test up down migrate revision run dev
 
 install:
 	uv sync
@@ -28,3 +28,9 @@ migrate:
 
 revision:
 	uv run alembic revision --autogenerate -m "$(msg)"
+
+run:
+	uv run python -m src.main
+
+dev: up
+	uv run python -m src.main
