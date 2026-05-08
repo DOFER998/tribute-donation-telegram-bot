@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: fundraiser
+      POSTGRES_USER: ${POSTGRES__USER}
       POSTGRES_PASSWORD: ${POSTGRES__PASSWORD}
-      POSTGRES_DB: fundraiser_bot
+      POSTGRES_DB: ${POSTGRES__DATABASE}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fundraiser"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES__USER}"]
       interval: 5s
       timeout: 3s
       retries: 5

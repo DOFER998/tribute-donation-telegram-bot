@@ -2,14 +2,14 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: fundraiser
+      POSTGRES_USER: ${POSTGRES__USER}
       POSTGRES_PASSWORD: ${POSTGRES__PASSWORD}
-      POSTGRES_DB: fundraiser_bot
+      POSTGRES_DB: ${POSTGRES__DATABASE}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fundraiser"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES__USER}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -30,18 +30,6 @@ services:
     image: ghcr.io/dofer998/tribute-donation-telegram-bot:latest
     pull_policy: always
     env_file: .env
-    environment:
-      APP__HOST: 0.0.0.0
-      APP__PORT: 9090
-      APP__DEBUG: ${APP__DEBUG:-false}
-      POSTGRES__HOST: postgres
-      POSTGRES__PORT: 5432
-      POSTGRES__USER: fundraiser
-      POSTGRES__DATABASE: fundraiser_bot
-      REDIS__HOST: redis
-      REDIS__PORT: 6379
-      REDIS__NAME: 0
-      DIGEST__HOUR: ${DIGEST__HOUR:-21}
     depends_on:
       postgres:
         condition: service_healthy
