@@ -67,6 +67,7 @@ class NotificationQueueService:
             username, full_name = await get_user_display_name(
                 self.bot, env.tribute.alert_group_id, payload.telegram_user_id
             )
+            username = username or payload.telegram_username
             display_name = full_name or (f'@{username}' if username else 'Аноним')
 
         text = await render(

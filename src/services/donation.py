@@ -23,6 +23,8 @@ class DonationService:
             username, full_name = await get_user_display_name(
                 self.bot, env.tribute.alert_group_id, payload.telegram_user_id
             )
+            if username is None:
+                username = payload.telegram_username
 
         async with async_session() as session:
             repo = DonationRepository(session)

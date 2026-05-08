@@ -14,6 +14,8 @@ class DonationPayload(BaseObject):
     currency: str
     anonymously: bool = False
     web_app_link: str = ''
+    email: Optional[str] = None
     trb_user_id: Optional[str] = None
     user_id: Optional[int] = Field(default=None, deprecated=True)
     telegram_user_id: Optional[int] = None
+    telegram_username: Optional[str] = None
