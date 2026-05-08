@@ -30,6 +30,18 @@ services:
     image: ${BOT_IMAGE:-ghcr.io/dofer998/tribute-donation-telegram-bot:latest}
     pull_policy: always
     env_file: .env
+    environment:
+      APP__HOST: 0.0.0.0
+      APP__PORT: 9090
+      APP__DEBUG: ${APP__DEBUG:-false}
+      POSTGRES__HOST: postgres
+      POSTGRES__PORT: 5432
+      POSTGRES__USER: fundraiser
+      POSTGRES__DATABASE: fundraiser_bot
+      REDIS__HOST: redis
+      REDIS__PORT: 6379
+      REDIS__NAME: 0
+      DIGEST__HOUR: ${DIGEST__HOUR:-21}
     depends_on:
       postgres:
         condition: service_healthy
