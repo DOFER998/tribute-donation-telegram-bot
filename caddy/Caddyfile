@@ -1,30 +1,29 @@
 {
-    email {$ACME_EMAIL}
+	email {$ACME_EMAIL}
 }
 
 {$DOMAIN} {
-    encode gzip
+	encode gzip zstd
 
-    @telegram path /telegram
-    handle @telegram {
-        reverse_proxy bot:9090
-    }
+	request_body {
+		max_size 1MB
+	}
 
-    @tribute path /tribute
-    handle @tribute {
-        reverse_proxy bot:9090
-    }
+	@webhooks path /telegram /tribute
+	handle @webhooks {
+		reverse_proxy bot:9090
+	}
 
-    handle / {
-        reverse_proxy bot:9090
-    }
+	handle / {
+		reverse_proxy bot:9090
+	}
 
-    handle {
-        respond "Not found" 404
-    }
+	handle {
+		respond "Not found" 404
+	}
 
-    log {
-        output stdout
-        format console
-    }
+	log {
+		output stdout
+		format console
+	}
 }
