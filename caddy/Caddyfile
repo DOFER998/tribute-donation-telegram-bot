@@ -1,0 +1,30 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    encode gzip
+
+    @telegram path /telegram
+    handle @telegram {
+        reverse_proxy bot:9090
+    }
+
+    @tribute path /tribute
+    handle @tribute {
+        reverse_proxy bot:9090
+    }
+
+    handle / {
+        reverse_proxy bot:9090
+    }
+
+    handle {
+        respond "Not found" 404
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

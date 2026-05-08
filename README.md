@@ -34,39 +34,59 @@ REDIS__HOST=localhost
 
 ## Деплой (production)
 
-Прод запускается из готового образа из GHCR — клонировать код на сервер не нужно.
+На сервере держим:
 
-На сервере достаточно двух файлов:
+- `docker-compose.prod.yml` + `.env` (бот + БД + редис)
+- `caddy/docker-compose.yml` + `caddy/Caddyfile` + `caddy/.env` (reverse proxy с авто-TLS)
 
-1. `docker-compose.prod.yml`
-2. `.env` (только секреты + per-deploy значения, см. `.env.example`)
+Стек разделён на две независимых compose-папки, общающихся через общую docker-сеть `proxy`.
+
+### 1) Создаём общую сеть один раз
+
+```bash
+docker network create proxy
+```
+
+### 2) Поднимаем основной стек
 
 ```bash
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Образ при старте сам прогоняет `alembic upgrade head`, потом запускает Granian.
+Бот сам прогоняет `alembic upgrade head` и запускает Granian. Контейнер не открывает наружу никаких портов — внешний трафик придёт через Caddy.
 
-Tribute шлёт вебхук на `https://${APP__DOMAIN}/tribute`, Telegram — на `https://${APP__DOMAIN}/telegram`.
+### 3) Поднимаем Caddy
+
+```bash
+cd caddy
+cp .env.example .env       # заполнить DOMAIN и ACME_EMAIL
+docker compose up -d
+```
+
+Caddy слушает 80/443, проксирует `https://${DOMAIN}/telegram` и `/tribute` в `bot:9090` через сеть `proxy`. Сертификат Let's Encrypt оформляется автоматически при первом запросе.
+
+Tribute шлёт вебхук на `https://${DOMAIN}/tribute`, Telegram — на `https://${DOMAIN}/telegram`.
 
 ### Что в `.env` для прода
 
-Только то, что нельзя угадать или что секретно:
+Минимум для бота:
 
 - `BOT__TOKEN`
 - `APP__DOMAIN`, `APP__SECRET_TOKEN`
-- `POSTGRES__PASSWORD`, `REDIS__PASSWORD`
+- `POSTGRES__USER`, `POSTGRES__PASSWORD`, `POSTGRES__DATABASE`
+- `REDIS__PASSWORD`
 - `TRIBUTE__API_KEY`, `TRIBUTE__DONATE_LINK`, `TRIBUTE__ALERT_GROUP_ID`
 - `ADMIN__IDS`
 
-Хосты, порты, БД-имя, юзер, и пр. — захардкожены в `docker-compose.prod.yml` и/или дефолтны в pydantic-конфиге.
+Минимум для Caddy (`caddy/.env`):
+
+- `DOMAIN` — тот же что `APP__DOMAIN`
+- `ACME_EMAIL` — для уведомлений Let's Encrypt
 
 ### Сборка образа в CI
 
-`.github/workflows/docker-publish.yml` собирает и пушит образ в `ghcr.io/<owner>/<repo>` при пуше в `main` и при создании тегов `v*`. Никаких секретов не нужно — используется `GITHUB_TOKEN`.
-
-Если ghcr-пакет приватный, после первого пуша зайти в Settings → Packages и сделать его публичным или дать read-доступ деплой-машине через PAT.
+`.github/workflows/docker-publish.yml` собирает и пушит образ в `ghcr.io/dofer998/tribute-donation-telegram-bot` при пуше в `main` и при тегах `v*`. Используется `GITHUB_TOKEN`.
 
 ## Тесты и проверки
 

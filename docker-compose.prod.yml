@@ -8,6 +8,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES__USER}"]
       interval: 5s
@@ -20,6 +22,8 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    networks:
+      - internal
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS__PASSWORD}", "ping"]
       interval: 5s
@@ -35,10 +39,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "9090:9090"
+    networks:
+      - internal
+      - proxy
     restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  internal:
+  proxy:
+    external: true
+    name: proxy
