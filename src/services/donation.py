@@ -10,7 +10,11 @@ class DonationService:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def save(self, payload: DonationPayload) -> tuple[bool, int | None, bool]:
+    async def save(self, payload: DonationPayload) -> tuple[bool, bool]:
+        """
+        Returns (saved_now, is_anonymous).
+        saved_now=False означает дубликат (идемпотентность).
+        """
         is_anonymous = payload.anonymously or not payload.telegram_user_id
 
         username = None
@@ -38,7 +42,7 @@ class DonationService:
                     'Duplicate webhook ignored: donation_request_id={}',
                     payload.donation_request_id,
                 )
-                return False, None, is_anonymous
+                return False, is_anonymous
 
             logger.info(
                 'Donation saved: id={}, amount={}, anon={}',
@@ -46,9 +50,4 @@ class DonationService:
                 payload.amount,
                 is_anonymous,
             )
-
-            if is_anonymous or not payload.telegram_user_id:
-                return True, None, is_anonymous
-
-            rank = await repo.get_user_rank(payload.telegram_user_id)
-            return True, rank, is_anonymous
+            return True, is_anonymous

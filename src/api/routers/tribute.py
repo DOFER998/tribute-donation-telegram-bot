@@ -49,11 +49,11 @@ async def tribute_webhook(
         logger.warning('Non-RUB currency ignored: {}', parsed.payload.currency)
         return Response(content='OK')
 
-    saved_now, rank, is_anonymous = await donation_service.save(parsed.payload)
+    saved_now, is_anonymous = await donation_service.save(parsed.payload)
     if not saved_now:
         return Response(content='OK')
 
-    await notification_queue.push(parsed.payload, rank, is_anonymous)
+    await notification_queue.push(parsed.payload, is_anonymous)
     await fundraiser_service.update_progress(parsed.payload.amount)
 
     return Response(content='OK')

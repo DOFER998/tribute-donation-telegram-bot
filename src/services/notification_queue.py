@@ -24,11 +24,10 @@ class NotificationQueueService:
         self.bot = bot
         self.redis = redis
 
-    async def push(self, payload: DonationPayload, rank: int | None, is_anonymous: bool) -> None:
+    async def push(self, payload: DonationPayload, is_anonymous: bool) -> None:
         data = json.dumps(
             {
                 'payload': payload.model_dump(mode='json'),
-                'rank': rank,
                 'is_anonymous': is_anonymous,
             }
         )
@@ -52,7 +51,6 @@ class NotificationQueueService:
     async def _process_one(self, raw: bytes) -> None:
         msg = json.loads(raw)
         payload = DonationPayload.model_validate(msg['payload'])
-        rank: int | None = msg.get('rank')
         is_anonymous: bool = msg.get('is_anonymous', False)
 
         if is_anonymous or not payload.telegram_user_id:
@@ -68,7 +66,6 @@ class NotificationQueueService:
             display_name=display_name,
             amount_kopecks=payload.amount,
             comment=payload.message,
-            rank=rank,
         )
 
         markup = get_donate_keyboard(env.tribute.donate_link)
