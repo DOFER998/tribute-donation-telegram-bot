@@ -58,4 +58,4 @@ def test_parse_tribute_request_round_trip():
     }
     parsed = parse_tribute_request(data)
     assert parsed is not None
-    assert parsed.payload.message == 'привет'
+    assert parsed.payload['message'] == 'привет'

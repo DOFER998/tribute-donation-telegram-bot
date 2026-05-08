@@ -3,7 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
 from loguru import logger
+from pydantic import ValidationError
 
+from src.api.types import DonationPayload
 from src.common import TEST_TRIBUTE_WEBHOOK_RESPONSE, TRIBUTE_WEBHOOK_PATH
 from src.services import (
     DonationService,
@@ -42,18 +44,24 @@ async def tribute_webhook(
         return Response(content='Invalid', status_code=400)
 
     if parsed.name not in (TributeRequestType.NEW_DONATION, TributeRequestType.RECURRENT_DONATION):
-        logger.info('Skipping event: {}', parsed.name)
+        logger.info('Skipping non-donation event: {}', parsed.name)
         return Response(content='OK')
 
-    if parsed.payload.currency.lower() != 'rub':
-        logger.warning('Non-RUB currency ignored: {}', parsed.payload.currency)
+    try:
+        donation = DonationPayload.model_validate(parsed.payload)
+    except ValidationError as e:
+        logger.warning('Invalid donation payload: {}', e)
+        return Response(content='Invalid donation payload', status_code=400)
+
+    if donation.currency.lower() != 'rub':
+        logger.warning('Non-RUB currency ignored: {}', donation.currency)
         return Response(content='OK')
 
-    saved_now, is_anonymous = await donation_service.save(parsed.payload)
+    saved_now, is_anonymous = await donation_service.save(donation)
     if not saved_now:
         return Response(content='OK')
 
-    await notification_queue.push(parsed.payload, is_anonymous)
-    await fundraiser_service.update_progress(parsed.payload.amount)
+    await notification_queue.push(donation, is_anonymous)
+    await fundraiser_service.update_progress(donation.amount)
 
     return Response(content='OK')

@@ -1,12 +1,12 @@
 from datetime import datetime
+from typing import Any
 
 from ..enums import TributeRequestType
 from .base import BaseObject
-from .donation_payload import DonationPayload
 
 
 class TributeRequest(BaseObject):
     name: TributeRequestType
     created_at: datetime
     sent_at: datetime
-    payload: DonationPayload
+    payload: dict[str, Any]
