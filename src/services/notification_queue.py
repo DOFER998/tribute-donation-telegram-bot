@@ -16,6 +16,7 @@ from src.common import (
     get_user_display_name,
     render,
 )
+from src.database import FundraiserRepository, async_session
 from src.keyboards import get_donate_keyboard
 
 
@@ -53,6 +54,13 @@ class NotificationQueueService:
         payload = DonationPayload.model_validate(msg['payload'])
         is_anonymous: bool = msg.get('is_anonymous', False)
 
+        async with async_session() as session:
+            active = await FundraiserRepository(session).get_active()
+
+        if active is None:
+            logger.info('Donation alert skipped: no active fundraiser')
+            return
+
         if is_anonymous or not payload.telegram_user_id:
             display_name = 'Аноним'
         else:
@@ -74,7 +82,7 @@ class NotificationQueueService:
             try:
                 await self.bot.send_message(
                     chat_id=env.tribute.alert_group_id,
-                    message_thread_id=env.tribute.alert_topic_id,
+                    message_thread_id=active.topic_id,
                     text=text,
                     reply_markup=markup,
                 )

@@ -54,6 +54,7 @@ class FundraiserService:
         end_date: datetime,
         count_donations_from: datetime,
         title: str | None = None,
+        topic_id: int | None = None,
     ) -> Fundraiser:
         async with async_session() as session:
             repo = FundraiserRepository(session)
@@ -65,6 +66,7 @@ class FundraiserService:
                 end_date=end_date,
                 count_donations_from=count_donations_from,
                 title=title,
+                topic_id=topic_id,
             )
             fundraiser_id = require_fundraiser_id(f)
             if initial > 0:
@@ -73,7 +75,7 @@ class FundraiserService:
 
         await self.bot.send_message(
             chat_id=env.tribute.alert_group_id,
-            message_thread_id=env.tribute.fundraiser_topic_id,
+            message_thread_id=topic_id,
             text=await render_fundraiser_announcement(f),
             reply_markup=get_donate_keyboard(env.tribute.donate_link),
         )
@@ -81,7 +83,7 @@ class FundraiserService:
         progress_text = await render_progress_message(f)
         msg = await self.bot.send_message(
             chat_id=env.tribute.alert_group_id,
-            message_thread_id=env.tribute.fundraiser_topic_id,
+            message_thread_id=topic_id,
             text=progress_text,
             reply_markup=get_donate_keyboard(env.tribute.donate_link),
         )
@@ -157,6 +159,7 @@ class FundraiserService:
             try:
                 await self.bot.send_message(
                     chat_id=env.tribute.alert_group_id,
+                    message_thread_id=f.topic_id,
                     text=completed_text,
                 )
             except TelegramAPIError as e:

@@ -31,6 +31,15 @@ def get_cancel_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def get_topic_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [_btn('📭 Без топика (общий чат)', FundraiserAction.SKIP_TOPIC)],
+            [_btn('✖️ Отмена', FundraiserAction.CANCEL_CREATE)],
+        ]
+    )
+
+
 def get_confirm_create_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

@@ -39,7 +39,7 @@ class DigestService:
         try:
             await self.bot.send_photo(
                 chat_id=env.tribute.alert_group_id,
-                message_thread_id=env.tribute.alert_topic_id,
+                message_thread_id=fundraiser.topic_id,
                 photo=photo,
                 caption=caption,
                 reply_markup=get_donate_keyboard(env.tribute.donate_link),

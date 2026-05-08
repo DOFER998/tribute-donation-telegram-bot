@@ -5,6 +5,7 @@ from .inline import (
     get_confirm_create_keyboard,
     get_donate_keyboard,
     get_empty_menu_keyboard,
+    get_topic_keyboard,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     'get_confirm_create_keyboard',
     'get_donate_keyboard',
     'get_empty_menu_keyboard',
+    'get_topic_keyboard',
 ]

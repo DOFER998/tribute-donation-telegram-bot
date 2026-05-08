@@ -21,6 +21,7 @@ from src.keyboards import (
     get_close_confirm_keyboard,
     get_confirm_create_keyboard,
     get_empty_menu_keyboard,
+    get_topic_keyboard,
 )
 from src.services import FundraiserService
 from src.services.fundraiser import require_fundraiser_id
@@ -61,6 +62,24 @@ async def _show_menu(target: Message, state: FSMContext) -> None:
         fundraiser = await FundraiserRepository(session).get_active()
     text, kb = await _render_menu(fundraiser)
     await target.answer(text, reply_markup=kb)
+
+
+async def _show_confirm(target: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    end_date = datetime.fromisoformat(data['end_date_iso'])
+    topic_id: int | None = data.get('topic_id')
+    topic_label = f'#{topic_id}' if topic_id else 'общий чат'
+    await state.set_state(FundraiserCreate.confirm)
+    await target.answer(
+        await render(
+            'fundraiser_confirm.html.j2',
+            title=data['title'],
+            target_kopecks=data['target_kopecks'],
+            end_date=end_date.strftime('%d.%m.%Y'),
+            topic_label=topic_label,
+        ),
+        reply_markup=get_confirm_create_keyboard(),
+    )
 
 
 @router.message(Command('fundraiser'))
@@ -150,18 +169,51 @@ async def end_date_received(message: Message, state: FSMContext) -> None:
 
     end_date = datetime.combine(parsed.date(), time(23, 59), tzinfo=MOSCOW_TZ)
     await state.update_data(end_date_iso=end_date.isoformat())
-    await state.set_state(FundraiserCreate.confirm)
-
-    data = await state.get_data()
+    await state.set_state(FundraiserCreate.topic)
     await message.answer(
-        await render(
-            'fundraiser_confirm.html.j2',
-            title=data['title'],
-            target_kopecks=data['target_kopecks'],
-            end_date=end_date.strftime('%d.%m.%Y'),
-        ),
-        reply_markup=get_confirm_create_keyboard(),
+        await render('fundraiser_ask_topic.html.j2'),
+        reply_markup=get_topic_keyboard(),
     )
+
+
+@router.message(FundraiserCreate.topic)
+async def topic_received(message: Message, state: FSMContext) -> None:
+    topic_id: int | None = None
+
+    if message.message_thread_id and (
+        message.forward_origin is not None or message.forward_from_chat is not None
+    ):
+        topic_id = message.message_thread_id
+    elif message.text:
+        raw = message.text.strip()
+        if raw.isdigit() and int(raw) > 0:
+            topic_id = int(raw)
+
+    if topic_id is None:
+        await message.answer(
+            await render('invalid_topic.html.j2'),
+            reply_markup=get_topic_keyboard(),
+        )
+        return
+
+    await state.update_data(topic_id=topic_id)
+    await _show_confirm(message, state)
+
+
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.SKIP_TOPIC),
+    FundraiserCreate.topic,
+)
+async def on_skip_topic(callback: CallbackQuery, state: FSMContext) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+
+    await state.update_data(topic_id=None)
+    await msg.edit_reply_markup(reply_markup=None)
+    await _show_confirm(msg, state)
+    await callback.answer()
 
 
 @router.callback_query(
@@ -187,6 +239,7 @@ async def confirm_create(callback: CallbackQuery, state: FSMContext, bot: Bot) -
         end_date=end_date,
         count_donations_from=now,
         title=data['title'],
+        topic_id=data.get('topic_id'),
     )
 
     await msg.edit_reply_markup(reply_markup=None)

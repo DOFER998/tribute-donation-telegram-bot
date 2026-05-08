@@ -18,6 +18,7 @@ class FundraiserRepository:
         end_date: datetime,
         count_donations_from: datetime,
         title: str | None = None,
+        topic_id: int | None = None,
     ) -> Fundraiser:
         fundraiser = Fundraiser(
             title=title,
@@ -25,6 +26,7 @@ class FundraiserRepository:
             start_date=start_date,
             end_date=end_date,
             count_donations_from=count_donations_from,
+            topic_id=topic_id,
         )
         self.session.add(fundraiser)
         await self.session.commit()

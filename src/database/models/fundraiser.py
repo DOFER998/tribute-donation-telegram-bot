@@ -22,5 +22,6 @@ class Fundraiser(TimestampMixin, SQLModel, table=True):
     start_date: datetime = Field(sa_type=TIMESTAMP(timezone=True))
     end_date: datetime = Field(sa_type=TIMESTAMP(timezone=True))
     count_donations_from: datetime = Field(sa_type=TIMESTAMP(timezone=True))
+    topic_id: int | None = Field(default=None, sa_type=BigInteger)
     channel_message_id: int | None = Field(default=None, sa_type=BigInteger)
     status: str = Field(default=FundraiserStatus.ACTIVE, index=True)
