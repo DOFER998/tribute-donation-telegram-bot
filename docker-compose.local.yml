@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fundraiser"]
       interval: 5s
@@ -21,7 +21,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redisdata:/data
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS__PASSWORD}", "ping"]
       interval: 5s
@@ -29,5 +29,5 @@ services:
       retries: 5
 
 volumes:
-  pgdata:
-  redisdata:
+  postgres_data:
+  redis_data:
