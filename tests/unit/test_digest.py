@@ -12,9 +12,11 @@ async def test_render_announcement_includes_progress_and_remaining():
     fundraiser.target_amount = 69800000
     text = await render_announcement(fundraiser)
     assert 'Уважаемые соседи' in text
-    assert 'Уже собрано: <b>240 000 ₽</b>' in text
+    assert 'Собрано: <b>240 000 ₽</b>' in text
     assert 'Осталось: <b>458 000 ₽</b>' in text
     assert '34%' in text
+    assert 'этаж' in text
+    assert 'квартиру' in text
 
 
 @pytest.mark.asyncio
