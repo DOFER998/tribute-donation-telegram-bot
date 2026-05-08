@@ -3,37 +3,96 @@ from datetime import datetime, time
 from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InaccessibleMessage, Message
+from aiogram.types import CallbackQuery, InaccessibleMessage, InlineKeyboardMarkup, Message
 
 from src.callback_data import FundraiserAction, FundraiserCreateCallback
-from src.common import MOSCOW_TZ, parse_date_msk, render
-from src.database import FundraiserRepository, FundraiserStatus, async_session
+from src.common import MOSCOW_TZ, format_date_moscow, parse_date_msk, render
+from src.database import (
+    DonationRepository,
+    Fundraiser,
+    FundraiserRepository,
+    FundraiserStatus,
+    async_session,
+)
 from src.filters import IsAdmin, IsPrivate
-from src.keyboards import get_cancel_keyboard, get_confirm_keyboard
+from src.keyboards import (
+    get_active_menu_keyboard,
+    get_cancel_keyboard,
+    get_close_confirm_keyboard,
+    get_confirm_create_keyboard,
+    get_empty_menu_keyboard,
+)
 from src.services import FundraiserService
 from src.services.fundraiser import require_fundraiser_id
 from src.states import FundraiserCreate
+
+from .export import build_donations_csv
 
 router = Router()
 router.message.filter(IsPrivate(), IsAdmin())
 router.callback_query.filter(IsAdmin())
 
 
-@router.message(Command('fundraiser_create'))
-async def cmd_create(message: Message, state: FSMContext) -> None:
+def _accessible_message(callback: CallbackQuery) -> Message | None:
+    msg = callback.message
+    if msg is None or isinstance(msg, InaccessibleMessage):
+        return None
+    return msg
+
+
+async def _render_menu(fundraiser: Fundraiser | None) -> tuple[str, InlineKeyboardMarkup]:
+    if fundraiser is None:
+        return await render('fundraiser_menu_empty.html.j2'), get_empty_menu_keyboard()
+
+    remaining = max(fundraiser.target_amount - fundraiser.current_amount, 0)
+    text = await render(
+        'fundraiser_menu_active.html.j2',
+        fundraiser=fundraiser,
+        remaining=remaining,
+        start_date=format_date_moscow(fundraiser.start_date),
+        end_date=format_date_moscow(fundraiser.end_date),
+    )
+    return text, get_active_menu_keyboard()
+
+
+async def _show_menu(target: Message, state: FSMContext) -> None:
+    await state.clear()
+    async with async_session() as session:
+        fundraiser = await FundraiserRepository(session).get_active()
+    text, kb = await _render_menu(fundraiser)
+    await target.answer(text, reply_markup=kb)
+
+
+@router.message(Command('fundraiser'))
+async def cmd_fundraiser(message: Message, state: FSMContext) -> None:
+    await _show_menu(message, state)
+
+
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.START_CREATE)
+)
+async def on_start_create(callback: CallbackQuery, state: FSMContext) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+
     async with async_session() as session:
         existing = await FundraiserRepository(session).get_active()
     if existing:
-        await message.answer(
-            await render('fundraiser_already_active.html.j2', fundraiser_id=existing.id)
-        )
+        await msg.edit_reply_markup(reply_markup=None)
+        text, kb = await _render_menu(existing)
+        await msg.answer(text, reply_markup=kb)
+        await callback.answer('Сбор уже активен', show_alert=True)
         return
 
     await state.set_state(FundraiserCreate.title)
-    await message.answer(
+    await msg.edit_reply_markup(reply_markup=None)
+    await msg.answer(
         await render('fundraiser_ask_title.html.j2'),
         reply_markup=get_cancel_keyboard(),
     )
+    await callback.answer()
 
 
 @router.message(FundraiserCreate.title)
@@ -103,19 +162,12 @@ async def end_date_received(message: Message, state: FSMContext) -> None:
             target_kopecks=data['target_kopecks'],
             end_date=end_date.strftime('%d.%m.%Y'),
         ),
-        reply_markup=get_confirm_keyboard(),
+        reply_markup=get_confirm_create_keyboard(),
     )
 
 
-def _accessible_message(callback: CallbackQuery) -> Message | None:
-    msg = callback.message
-    if msg is None or isinstance(msg, InaccessibleMessage):
-        return None
-    return msg
-
-
 @router.callback_query(
-    FundraiserCreateCallback.filter(F.action == FundraiserAction.CONFIRM),
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.CONFIRM_CREATE),
     FundraiserCreate.confirm,
 )
 async def confirm_create(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
@@ -147,32 +199,113 @@ async def confirm_create(callback: CallbackQuery, state: FSMContext, bot: Bot) -
             end_date=end_date.strftime('%d.%m.%Y'),
         )
     )
+    text, kb = await _render_menu(fundraiser)
+    await msg.answer(text, reply_markup=kb)
     await callback.answer()
 
 
-@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.CANCEL))
+@router.callback_query(FundraiserCreateCallback.filter(F.action == FundraiserAction.CANCEL_CREATE))
 async def cancel_create(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.clear()
     msg = _accessible_message(callback)
+    await state.clear()
     if msg is None:
         await callback.answer()
         return
     await msg.edit_reply_markup(reply_markup=None)
     await msg.answer(await render('fundraiser_cancelled.html.j2'))
+    async with async_session() as session:
+        fundraiser = await FundraiserRepository(session).get_active()
+    text, kb = await _render_menu(fundraiser)
+    await msg.answer(text, reply_markup=kb)
     await callback.answer()
 
 
-@router.message(Command('fundraiser_close'))
-async def cmd_close(message: Message, bot: Bot) -> None:
-    async with async_session() as session:
-        f = await FundraiserRepository(session).get_active()
-        if not f:
-            await message.answer(await render('no_active_fundraiser.html.j2'))
-            return
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.BACK_TO_MENU)
+)
+async def on_back_to_menu(callback: CallbackQuery, state: FSMContext) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+    await msg.edit_reply_markup(reply_markup=None)
+    await _show_menu(msg, state)
+    await callback.answer()
 
-    fundraiser_id = require_fundraiser_id(f)
+
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_REQUEST)
+)
+async def on_close_request(callback: CallbackQuery) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+
+    async with async_session() as session:
+        fundraiser = await FundraiserRepository(session).get_active()
+
+    if fundraiser is None:
+        await msg.edit_reply_markup(reply_markup=None)
+        await msg.answer(await render('no_active_fundraiser.html.j2'))
+        await callback.answer()
+        return
+
+    await msg.edit_reply_markup(reply_markup=None)
+    await msg.answer(
+        await render('fundraiser_close_confirm.html.j2', fundraiser=fundraiser),
+        reply_markup=get_close_confirm_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.CLOSE_CONFIRM)
+)
+async def on_close_confirm(callback: CallbackQuery, bot: Bot) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+
+    async with async_session() as session:
+        fundraiser = await FundraiserRepository(session).get_active()
+
+    if fundraiser is None:
+        await msg.edit_reply_markup(reply_markup=None)
+        await msg.answer(await render('no_active_fundraiser.html.j2'))
+        await callback.answer()
+        return
+
+    fundraiser_id = require_fundraiser_id(fundraiser)
     service = FundraiserService(bot)
     await service.close_fundraiser(fundraiser_id, FundraiserStatus.CANCELLED)
-    await message.answer(
+
+    await msg.edit_reply_markup(reply_markup=None)
+    await msg.answer(
         await render('fundraiser_closed_ok.html.j2', fundraiser_id=fundraiser_id)
     )
+    text, kb = await _render_menu(None)
+    await msg.answer(text, reply_markup=kb)
+    await callback.answer()
+
+
+@router.callback_query(
+    FundraiserCreateCallback.filter(F.action == FundraiserAction.EXPORT_CSV)
+)
+async def on_export_csv(callback: CallbackQuery) -> None:
+    msg = _accessible_message(callback)
+    if msg is None:
+        await callback.answer()
+        return
+
+    async with async_session() as session:
+        donations = await DonationRepository(session).get_all()
+
+    if not donations:
+        await msg.answer(await render('no_donations.html.j2'))
+        await callback.answer()
+        return
+
+    await msg.answer_document(build_donations_csv(donations))
+    await callback.answer('Готово')

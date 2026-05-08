@@ -2,27 +2,13 @@ import csv
 import io
 from datetime import datetime
 
-from aiogram import Router
-from aiogram.filters import Command
-from aiogram.types import BufferedInputFile, Message
+from aiogram.types import BufferedInputFile
 
-from src.common import format_amount, render
-from src.database import DonationRepository, async_session
-from src.filters import IsAdmin, IsPrivate
-
-router = Router()
-router.message.filter(IsPrivate(), IsAdmin())
+from src.common import format_amount
+from src.database import Donation
 
 
-@router.message(Command('donations_csv'))
-async def cmd_export(message: Message) -> None:
-    async with async_session() as session:
-        donations = await DonationRepository(session).get_all()
-
-    if not donations:
-        await message.answer(await render('no_donations.html.j2'))
-        return
-
+def build_donations_csv(donations: list[Donation]) -> BufferedInputFile:
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow([
@@ -46,4 +32,4 @@ async def cmd_export(message: Message) -> None:
 
     payload = buf.getvalue().encode('utf-8-sig')
     filename = f'donations_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-    await message.answer_document(BufferedInputFile(payload, filename=filename))
+    return BufferedInputFile(payload, filename=filename)

@@ -10,9 +10,7 @@ from loguru import logger
 
 def get_admin_commands() -> list[BotCommand]:
     return [
-        BotCommand(command='fundraiser_create', description='Создать сбор'),
-        BotCommand(command='fundraiser_close', description='Закрыть текущий сбор'),
-        BotCommand(command='donations_csv', description='Выгрузка взносов CSV'),
+        BotCommand(command='fundraiser', description='Меню сбора'),
     ]
 
 
