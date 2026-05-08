@@ -2,27 +2,35 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.services.digest import render_digest
+from src.services.digest import render_announcement
 
 
 @pytest.mark.asyncio
-async def test_render_digest_no_fundraiser_no_top():
-    today = {'total_amount': 0, 'count': 0, 'unique_donors': 0}
-    text = await render_digest(today, None, [])
-    assert '📊' in text
-    assert 'Собрано: 0 ₽' in text
-
-
-@pytest.mark.asyncio
-async def test_render_digest_with_fundraiser_and_top():
-    today = {'total_amount': 200000, 'count': 1, 'unique_donors': 1}
+async def test_render_announcement_includes_progress_and_remaining():
     fundraiser = MagicMock()
-    fundraiser.current_amount = 200000
-    fundraiser.target_amount = 1000000
-    top = [
-        {'telegram_user_id': 1, 'username': 'a', 'full_name': 'Alice', 'total_amount': 200000},
-    ]
-    text = await render_digest(today, fundraiser, top)
-    assert 'Топ-3' in text
-    assert 'Alice' in text
-    assert '20%' in text
+    fundraiser.current_amount = 24000000
+    fundraiser.target_amount = 69800000
+    text = await render_announcement(fundraiser)
+    assert 'Уважаемые соседи' in text
+    assert 'Уже собрано: <b>240 000 ₽</b>' in text
+    assert 'Осталось: <b>458 000 ₽</b>' in text
+    assert '34%' in text
+
+
+@pytest.mark.asyncio
+async def test_render_announcement_caption_fits_telegram_limit():
+    fundraiser = MagicMock()
+    fundraiser.current_amount = 0
+    fundraiser.target_amount = 69800000
+    text = await render_announcement(fundraiser)
+    assert len(text) <= 1024
+
+
+@pytest.mark.asyncio
+async def test_render_announcement_handles_overshoot():
+    fundraiser = MagicMock()
+    fundraiser.current_amount = 70000000
+    fundraiser.target_amount = 69800000
+    text = await render_announcement(fundraiser)
+    assert 'Осталось: <b>0 ₽</b>' in text
+    assert '100%' in text
