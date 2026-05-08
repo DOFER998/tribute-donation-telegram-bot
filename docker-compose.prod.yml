@@ -27,7 +27,7 @@ services:
       retries: 5
 
   bot:
-    image: ${BOT_IMAGE:-ghcr.io/dofer998/tribute-donation-telegram-bot:latest}
+    image: ghcr.io/dofer998/tribute-donation-telegram-bot:latest
     pull_policy: always
     env_file: .env
     environment:
