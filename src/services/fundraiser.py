@@ -4,12 +4,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 
-from src.common import (
-    MOSCOW_TZ,
-    env,
-    format_date_moscow,
-    render,
-)
+from src.common import MOSCOW_TZ, env, render
 from src.database import Fundraiser, FundraiserRepository, FundraiserStatus, async_session
 from src.keyboards import get_donate_keyboard
 
@@ -21,11 +16,11 @@ def require_fundraiser_id(fundraiser: Fundraiser) -> int:
 
 
 async def render_progress_message(fundraiser: Fundraiser) -> str:
+    remaining = max(fundraiser.target_amount - fundraiser.current_amount, 0)
     return await render(
         'fundraiser_progress.html.j2',
         fundraiser=fundraiser,
-        start_date=format_date_moscow(fundraiser.start_date),
-        end_date=format_date_moscow(fundraiser.end_date),
+        remaining=remaining,
     )
 
 
