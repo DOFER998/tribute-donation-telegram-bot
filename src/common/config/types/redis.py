@@ -1,16 +1,20 @@
-from pydantic import SecretStr
+from pydantic import RedisDsn, SecretStr
 
 from .base import BaseTypeConfig
 
 
 class RedisTypeConfig(BaseTypeConfig):
     host: str
-    port: int = 6379
-    name: int = 0
-    password: SecretStr | None = None
+    port: int
+    name: int
+    password: SecretStr
 
     @property
     def dsn(self) -> str:
-        if self.password:
-            return f'redis://:{self.password.get_secret_value()}@{self.host}:{self.port}/{self.name}'
-        return f'redis://{self.host}:{self.port}/{self.name}'
+        return RedisDsn.build(
+            scheme='redis',
+            password=self.password.get_secret_value(),
+            host=self.host,
+            port=self.port,
+            path=str(self.name),
+        ).unicode_string()
