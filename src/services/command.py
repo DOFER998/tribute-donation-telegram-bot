@@ -1,9 +1,11 @@
 from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
     BotCommand,
     BotCommandScopeAllPrivateChats,
     BotCommandScopeChat,
 )
+from loguru import logger
 
 
 def get_admin_commands() -> list[BotCommand]:
@@ -25,13 +27,23 @@ class CommandService:
         self, *, admin_ids: list[int], commands: list[BotCommand]
     ) -> None:
         for admin_id in admin_ids:
-            await self.bot.set_my_commands(
-                commands=commands, scope=BotCommandScopeChat(chat_id=admin_id)
-            )
+            try:
+                await self.bot.set_my_commands(
+                    commands=commands, scope=BotCommandScopeChat(chat_id=admin_id)
+                )
+            except TelegramAPIError as e:
+                logger.warning(
+                    'Skip admin commands for {} (admin must DM the bot first): {}',
+                    admin_id,
+                    e,
+                )
 
     async def delete_commands_all_private_chats(self) -> None:
         await self.bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
 
     async def delete_commands_for_admins(self, admin_ids: list[int]) -> None:
         for admin_id in admin_ids:
-            await self.bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=admin_id))
+            try:
+                await self.bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=admin_id))
+            except TelegramAPIError as e:
+                logger.warning('Skip delete admin commands for {}: {}', admin_id, e)
