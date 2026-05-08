@@ -1,6 +1,6 @@
 [project]
 name = "tribute-donation-telegram-bot"
-dynamic = ["version"]
+version = "0.1.0"
 description = "Telegram bot for camera-fundraiser via Tribute."
 requires-python = ">=3.13"
 dependencies = [
@@ -48,9 +48,6 @@ known-first-party = ["src"]
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"
-
-[tool.hatch.version]
-path = "src/__meta__.py"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
