@@ -14,6 +14,12 @@ from src.database import Fundraiser, FundraiserRepository, FundraiserStatus, asy
 from src.keyboards import get_donate_keyboard
 
 
+def require_fundraiser_id(fundraiser: Fundraiser) -> int:
+    if fundraiser.id is None:
+        raise RuntimeError('fundraiser is not persisted (id is None)')
+    return fundraiser.id
+
+
 async def render_progress_message(fundraiser: Fundraiser) -> str:
     return await render(
         'fundraiser_progress.html.j2',
@@ -55,8 +61,9 @@ class FundraiserService:
                 count_donations_from=count_donations_from,
                 title=title,
             )
+            fundraiser_id = require_fundraiser_id(f)
             if initial > 0:
-                await repo.update_amount(f.id, initial)
+                await repo.update_amount(fundraiser_id, initial)
                 f.current_amount = initial
 
         text = await render_progress_message(f)
@@ -74,34 +81,37 @@ class FundraiserService:
 
         async with async_session() as session:
             repo = FundraiserRepository(session)
-            f = await repo.set_message_id(f.id, msg.message_id)
+            updated = await repo.set_message_id(fundraiser_id, msg.message_id)
+            if updated is None:
+                raise RuntimeError(f'fundraiser {fundraiser_id} disappeared after creation')
 
-        logger.info('Fundraiser published: id={}, message_id={}', f.id, msg.message_id)
-        return f
+        logger.info('Fundraiser published: id={}, message_id={}', updated.id, msg.message_id)
+        return updated
 
     async def update_progress(self, amount: int) -> None:
         async with async_session() as session:
             repo = FundraiserRepository(session)
-            f = await repo.get_active()
-            if not f:
+            active = await repo.get_active()
+            if not active:
                 return
 
-            f = await repo.add_amount(f.id, amount)
-            if not f or not f.channel_message_id:
+            active_id = require_fundraiser_id(active)
+            updated = await repo.add_amount(active_id, amount)
+            if not updated or not updated.channel_message_id:
                 return
 
             try:
                 await self.bot.edit_message_text(
                     chat_id=env.tribute.alert_group_id,
-                    message_id=f.channel_message_id,
-                    text=await render_progress_message(f),
+                    message_id=updated.channel_message_id,
+                    text=await render_progress_message(updated),
                     reply_markup=get_donate_keyboard(env.tribute.donate_link),
                 )
             except TelegramAPIError as e:
                 logger.warning('Failed to update progress message: {}', e)
 
-            if f.current_amount >= f.target_amount:
-                await self.close_fundraiser(f.id, FundraiserStatus.COMPLETED)
+            if updated.current_amount >= updated.target_amount:
+                await self.close_fundraiser(require_fundraiser_id(updated), FundraiserStatus.COMPLETED)
 
     async def close_fundraiser(
         self,
@@ -162,4 +172,4 @@ class FundraiserService:
             repo = FundraiserRepository(session)
             expired = await repo.get_expired_active(now)
             for f in expired:
-                await self.close_fundraiser(f.id, FundraiserStatus.COMPLETED)
+                await self.close_fundraiser(require_fundraiser_id(f), FundraiserStatus.COMPLETED)

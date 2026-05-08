@@ -1,4 +1,4 @@
-.PHONY: install lint format test up down migrate revision
+.PHONY: install lint format typecheck check test up down migrate revision
 
 install:
 	uv sync
@@ -8,6 +8,11 @@ lint:
 
 format:
 	uv run ruff format src tests
+
+typecheck:
+	uv run ty check
+
+check: lint typecheck test
 
 test:
 	uv run pytest --cov=src --cov-report=term-missing

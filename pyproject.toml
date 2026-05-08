@@ -27,6 +27,7 @@ dev = [
     "httpx>=0.27",
     "testcontainers[postgres]>=4.9",
     "ruff>=0.15.11",
+    "ty>=0.0.34",
 ]
 
 [tool.ruff]
@@ -37,7 +38,7 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "N", "SIM", "C4", "TID", "RET", "S", "BLE", "TRY"]
-ignore = ["N805", "UP006", "UP035", "UP045", "TID252", "Q000", "Q003", "E501", "UP046"]
+ignore = ["N805", "UP006", "UP035", "UP045", "TID252", "Q000", "Q003", "E501", "UP046", "TRY003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106"]
@@ -64,3 +65,39 @@ omit = ["src/__meta__.py"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 40
+
+[tool.ty.environment]
+python-version = "3.13"
+python = ".venv"
+root = ["."]
+
+[tool.ty.src]
+include = ["src", "tests", "alembic"]
+exclude = ["alembic/versions"]
+
+[tool.ty.terminal]
+output-format = "concise"
+
+# pydantic-settings reads required fields from env at runtime; ty doesn't see that.
+[[tool.ty.overrides]]
+include = ["src/common/config/environment.py"]
+
+[tool.ty.overrides.rules]
+missing-argument = "ignore"
+
+# SQLAlchemy/SQLModel column descriptors are dynamic — ty has no plugin (yet) for them.
+[[tool.ty.overrides]]
+include = ["src/database/repositories/**", "src/database/models/**"]
+
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
+invalid-argument-type = "ignore"
+no-matching-overload = "ignore"
+
+# redis-py exposes the same command interface for sync & async clients,
+# so its stubs return `Awaitable[T] | T` even though the async client always awaits.
+[[tool.ty.overrides]]
+include = ["src/services/notification_queue.py"]
+
+[tool.ty.overrides.rules]
+invalid-await = "ignore"

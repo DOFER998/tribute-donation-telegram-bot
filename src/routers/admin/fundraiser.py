@@ -8,6 +8,7 @@ from src.common import MOSCOW_TZ, env, parse_date_msk, render
 from src.database import FundraiserRepository, FundraiserStatus, async_session
 from src.filters import IsAdmin, IsPrivate
 from src.services import FundraiserService
+from src.services.fundraiser import require_fundraiser_id
 
 router = Router()
 router.message.filter(IsPrivate(), IsAdmin())
@@ -58,6 +59,9 @@ async def cmd_close(message: Message, bot: Bot) -> None:
             await message.answer(await render('no_active_fundraiser.html.j2'))
             return
 
+    fundraiser_id = require_fundraiser_id(f)
     service = FundraiserService(bot)
-    await service.close_fundraiser(f.id, FundraiserStatus.CANCELLED)
-    await message.answer(await render('fundraiser_closed_ok.html.j2', fundraiser_id=f.id))
+    await service.close_fundraiser(fundraiser_id, FundraiserStatus.CANCELLED)
+    await message.answer(
+        await render('fundraiser_closed_ok.html.j2', fundraiser_id=fundraiser_id)
+    )
