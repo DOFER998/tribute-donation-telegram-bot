@@ -2,7 +2,6 @@ from html import escape
 
 
 def format_amount(kopecks: int) -> str:
-    """копейки -> '1 234' / '1 234.56'"""
     rubles = kopecks / 100
     if rubles == int(rubles):
         return f'{int(rubles):,}'.replace(',', ' ')

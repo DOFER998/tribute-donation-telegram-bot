@@ -1,0 +1,8 @@
+{% set percent, bar = progress(fundraiser.current_amount, fundraiser.target_amount) %}
+🎉 <b>Сбор завершён!</b>
+
+<b>{{ fundraiser.title or '' }}</b>
+{{ bar }} <b>{{ percent }}%</b>
+Собрано: <b>{{ fundraiser.current_amount|amount }} ₽</b> из {{ fundraiser.target_amount|amount }} ₽
+
+Спасибо всем, кто участвовал!

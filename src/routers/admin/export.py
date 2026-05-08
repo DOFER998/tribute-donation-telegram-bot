@@ -6,7 +6,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
-from src.common import format_amount
+from src.common import format_amount, render
 from src.database import DonationRepository, async_session
 from src.filters import IsAdmin, IsPrivate
 
@@ -20,7 +20,7 @@ async def cmd_export(message: Message) -> None:
         donations = await DonationRepository(session).get_all()
 
     if not donations:
-        await message.answer('Донатов пока нет.')
+        await message.answer(await render('no_donations.html.j2'))
         return
 
     buf = io.StringIO()

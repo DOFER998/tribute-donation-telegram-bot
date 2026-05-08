@@ -11,10 +11,6 @@ class DonationService:
         self.bot = bot
 
     async def save(self, payload: DonationPayload) -> tuple[bool, int | None, bool]:
-        """
-        Returns (saved_now, rank, is_anonymous).
-        saved_now=False означает дубликат (идемпотентность).
-        """
         is_anonymous = payload.anonymously or not payload.telegram_user_id
 
         username = None

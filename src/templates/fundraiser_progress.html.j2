@@ -1,0 +1,7 @@
+{% set percent, bar = progress(fundraiser.current_amount, fundraiser.target_amount) %}
+📹 <b>{{ fundraiser.title or 'Сбор' }}</b>
+
+{{ bar }} <b>{{ percent }}%</b>
+{{ fundraiser.current_amount|amount }} ₽ / {{ fundraiser.target_amount|amount }} ₽
+
+📅 {{ start_date }} — {{ end_date }}

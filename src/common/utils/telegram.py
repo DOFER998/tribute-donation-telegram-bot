@@ -4,7 +4,6 @@ from loguru import logger
 
 
 async def get_user_display_name(bot: Bot, chat_id: int, user_id: int) -> tuple[str | None, str | None]:
-    """Вернуть (username, full_name) для пользователя в чате. None если не удалось получить."""
     try:
         member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
     except TelegramAPIError as e:

@@ -8,6 +8,7 @@ from .constants import (
     TEST_TRIBUTE_WEBHOOK_RESPONSE,
     TRIBUTE_WEBHOOK_PATH,
 )
+from .templates import render
 from .utils import (
     calc_progress,
     escape_html,
@@ -36,6 +37,7 @@ __all__ = [
     'format_datetime_moscow',
     'get_user_display_name',
     'parse_date_msk',
+    'render',
     'setup_logging',
     'utc_now',
 ]

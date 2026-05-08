@@ -4,15 +4,8 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from loguru import logger
 
-from src.common import (
-    MOSCOW_TZ,
-    calc_progress,
-    env,
-    escape_html,
-    format_amount,
-    format_date_moscow,
-)
-from src.database import DonationRepository, FundraiserRepository, async_session
+from src.common import MOSCOW_TZ, env, format_date_moscow, render
+from src.database import DonationRepository, Fundraiser, FundraiserRepository, async_session
 
 
 def _today_window() -> tuple[datetime, datetime]:
@@ -22,39 +15,32 @@ def _today_window() -> tuple[datetime, datetime]:
     return today_start, today_end
 
 
-def _format_top_donor(rank: int, d: dict) -> str:
-    name = d.get('full_name') or (f'@{d["username"]}' if d.get('username') else 'без имени')
-    return f'{rank}. {escape_html(name)} — {format_amount(d["total_amount"])} ₽'
+def _donor_display_name(donor: dict) -> str:
+    return donor.get('full_name') or (
+        f'@{donor["username"]}' if donor.get('username') else 'без имени'
+    )
 
 
-def render_digest(today_stats: dict, fundraiser, top: list[dict]) -> str:
+async def render_digest(
+    today_stats: dict,
+    fundraiser: Fundraiser | None,
+    top: list[dict],
+) -> str:
     today_start, _ = _today_window()
-    lines = [
-        f'📊 <b>Сводка за {format_date_moscow(today_start)}</b>',
-        '',
-        '<b>За сегодня:</b>',
-        f'• Собрано: {format_amount(today_stats["total_amount"])} ₽',
-        f'• Донатов: {today_stats["count"]}',
-        f'• Уникальных: {today_stats["unique_donors"]}',
+    remaining = (
+        max(fundraiser.target_amount - fundraiser.current_amount, 0) if fundraiser else 0
+    )
+    top_display = [
+        {**donor, 'display_name': _donor_display_name(donor)} for donor in top
     ]
-
-    if fundraiser:
-        percent, bar = calc_progress(fundraiser.current_amount, fundraiser.target_amount)
-        remaining = max(fundraiser.target_amount - fundraiser.current_amount, 0)
-        lines += [
-            '',
-            '<b>Всего по сбору:</b>',
-            f'• {format_amount(fundraiser.current_amount)} ₽ / {format_amount(fundraiser.target_amount)} ₽',
-            f'• {bar} {percent}%',
-            f'• Осталось: {format_amount(remaining)} ₽',
-        ]
-
-    if top:
-        lines += ['', '<b>Топ-3:</b>']
-        for i, donor in enumerate(top, 1):
-            lines.append(_format_top_donor(i, donor))
-
-    return '\n'.join(lines)
+    return await render(
+        'daily_digest.html.j2',
+        today_date=format_date_moscow(today_start),
+        today=today_stats,
+        fundraiser=fundraiser,
+        remaining=remaining,
+        top=top_display,
+    )
 
 
 class DigestService:
@@ -70,7 +56,7 @@ class DigestService:
             top = await d_repo.get_top_donors(limit=3)
             fundraiser = await f_repo.get_active()
 
-        text = render_digest(today_stats, fundraiser, top)
+        text = await render_digest(today_stats, fundraiser, top)
 
         for admin_id in env.admin.admin_ids:
             try:
@@ -79,3 +65,6 @@ class DigestService:
                 logger.warning('Failed to DM admin {}: {}', admin_id, e)
 
         logger.info('Daily digest sent to {} admins', len(env.admin.admin_ids))
+
+
+__all__ = ['DigestService', 'render_digest']

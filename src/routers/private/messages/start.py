@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from src.common import env, escape_html
+from src.common import env, render
 from src.filters import IsPrivate
 from src.keyboards import get_donate_keyboard
 
@@ -12,10 +12,10 @@ router.message.filter(IsPrivate())
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    text = (
-        f'Привет, {escape_html(message.from_user.full_name)}!\n\n'
-        '🏠 Мы собираем деньги на установку видеонаблюдения '
-        f'на этажах нашего корпуса. Цель — <b>{env.fundraiser.title}</b>.\n\n'
-        'Жми кнопку ниже чтобы поддержать сбор.'
+    user_name = message.from_user.full_name if message.from_user else 'друг'
+    text = await render(
+        'start.html.j2',
+        user_name=user_name,
+        fundraiser_title=env.fundraiser.title,
     )
     await message.answer(text, reply_markup=get_donate_keyboard(env.tribute.donate_link))

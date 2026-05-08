@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 from src.common import env as app_env
-from src.database.models import Donation, Fundraiser  # noqa: F401  -- регистрация моделей
+from src.database.models import Donation, Fundraiser
 
 config = context.config
 config.set_main_option('sqlalchemy.url', app_env.postgres.dsn)
@@ -17,6 +17,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = SQLModel.metadata
+for model in (Donation, Fundraiser):
+    if model.__tablename__ not in target_metadata.tables:
+        raise RuntimeError(f'{model.__name__} is not registered with metadata')
 
 
 def run_migrations_offline() -> None:

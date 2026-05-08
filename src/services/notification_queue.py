@@ -1,40 +1,22 @@
 import asyncio
 import json
+from json import JSONDecodeError
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramAPIError, TelegramRetryAfter
 from loguru import logger
+from pydantic import ValidationError
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from src.api.types import DonationPayload
 from src.common import (
     NOTIFICATION_QUEUE_KEY,
     env,
-    escape_html,
-    format_amount,
     get_user_display_name,
+    render,
 )
 from src.keyboards import get_donate_keyboard
-
-
-def _render_donation_alert(
-    *,
-    display_name: str,
-    amount_kopecks: int,
-    comment: str | None,
-    rank: int | None,
-) -> str:
-    lines = [
-        '💰 <b>Новый донат!</b>',
-        '',
-        f'{escape_html(display_name)} задонатил <b>{format_amount(amount_kopecks)} ₽</b>',
-    ]
-    if rank is not None:
-        lines.append(f'🏅 Место в рейтинге: <b>{rank}</b>')
-    if comment:
-        lines.append('')
-        lines.append(f'💬 «{escape_html(comment)}»')
-    return '\n'.join(lines)
 
 
 class NotificationQueueService:
@@ -64,7 +46,7 @@ class NotificationQueueService:
             except asyncio.CancelledError:
                 logger.info('Notification worker stopped')
                 return
-            except Exception:  # noqa: BLE001
+            except (RedisError, JSONDecodeError, ValidationError, TelegramAPIError, OSError):
                 logger.exception('Notification worker error')
 
     async def _process_one(self, raw: bytes) -> None:
@@ -81,7 +63,8 @@ class NotificationQueueService:
             )
             display_name = full_name or (f'@{username}' if username else 'Аноним')
 
-        text = _render_donation_alert(
+        text = await render(
+            'donation_alert.html.j2',
             display_name=display_name,
             amount_kopecks=payload.amount,
             comment=payload.message,

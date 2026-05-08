@@ -6,38 +6,29 @@ from loguru import logger
 
 from src.common import (
     MOSCOW_TZ,
-    calc_progress,
     env,
-    escape_html,
-    format_amount,
     format_date_moscow,
+    render,
 )
 from src.database import Fundraiser, FundraiserRepository, FundraiserStatus, async_session
 from src.keyboards import get_donate_keyboard
 
 
-def render_progress_message(f: Fundraiser) -> str:
-    percent, bar = calc_progress(f.current_amount, f.target_amount)
-    lines = [
-        '📹 <b>{}</b>'.format(escape_html(f.title or 'Сбор')),
-        '',
-        f'{bar} <b>{percent}%</b>',
-        f'{format_amount(f.current_amount)} ₽ / {format_amount(f.target_amount)} ₽',
-        '',
-        f'📅 {format_date_moscow(f.start_date)} — {format_date_moscow(f.end_date)}',
-    ]
-    return '\n'.join(lines)
-
-
-def render_completed_message(f: Fundraiser) -> str:
-    percent, bar = calc_progress(f.current_amount, f.target_amount)
-    return (
-        '🎉 <b>Сбор завершён!</b>\n\n'
-        f'<b>{escape_html(f.title or "")}</b>\n'
-        f'{bar} <b>{percent}%</b>\n'
-        f'Собрано: <b>{format_amount(f.current_amount)} ₽</b> из {format_amount(f.target_amount)} ₽\n\n'
-        'Спасибо всем, кто участвовал!'
+async def render_progress_message(fundraiser: Fundraiser) -> str:
+    return await render(
+        'fundraiser_progress.html.j2',
+        fundraiser=fundraiser,
+        start_date=format_date_moscow(fundraiser.start_date),
+        end_date=format_date_moscow(fundraiser.end_date),
     )
+
+
+async def render_completed_message(fundraiser: Fundraiser) -> str:
+    return await render('fundraiser_completed.html.j2', fundraiser=fundraiser)
+
+
+async def render_admin_close_message(fundraiser: Fundraiser, reason: str) -> str:
+    return await render('fundraiser_admin_close.html.j2', fundraiser=fundraiser, reason=reason)
 
 
 class FundraiserService:
@@ -68,7 +59,7 @@ class FundraiserService:
                 await repo.update_amount(f.id, initial)
                 f.current_amount = initial
 
-        text = render_progress_message(f)
+        text = await render_progress_message(f)
         msg = await self.bot.send_message(
             chat_id=env.tribute.alert_group_id,
             message_thread_id=env.tribute.fundraiser_topic_id,
@@ -103,7 +94,7 @@ class FundraiserService:
                 await self.bot.edit_message_text(
                     chat_id=env.tribute.alert_group_id,
                     message_id=f.channel_message_id,
-                    text=render_progress_message(f),
+                    text=await render_progress_message(f),
                     reply_markup=get_donate_keyboard(env.tribute.donate_link),
                 )
             except TelegramAPIError as e:
@@ -123,12 +114,14 @@ class FundraiserService:
             if not f:
                 return
 
+            completed_text = await render_completed_message(f)
+
             if f.channel_message_id:
                 try:
                     await self.bot.edit_message_text(
                         chat_id=env.tribute.alert_group_id,
                         message_id=f.channel_message_id,
-                        text=render_completed_message(f),
+                        text=completed_text,
                     )
                     await self.bot.unpin_chat_message(
                         chat_id=env.tribute.alert_group_id,
@@ -140,7 +133,7 @@ class FundraiserService:
             try:
                 await self.bot.send_message(
                     chat_id=env.tribute.alert_group_id,
-                    text=render_completed_message(f),
+                    text=completed_text,
                 )
             except TelegramAPIError as e:
                 logger.warning('Failed to send completion message: {}', e)
@@ -156,11 +149,7 @@ class FundraiserService:
         else:
             reason = 'закрыт вручную'
 
-        text = (
-            f'ℹ️ Сбор #{f.id} закрыт ({reason}).\n'
-            f'Собрано: {format_amount(f.current_amount)} ₽ '
-            f'из {format_amount(f.target_amount)} ₽'
-        )
+        text = await render_admin_close_message(f, reason)
         for admin_id in env.admin.admin_ids:
             try:
                 await self.bot.send_message(chat_id=admin_id, text=text)

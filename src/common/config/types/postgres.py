@@ -5,7 +5,7 @@ from .base import BaseTypeConfig
 
 class PostgresTypeConfig(BaseTypeConfig):
     host: str
-    port: int = 5432
+    port: int
     user: str
     password: SecretStr
     database: str

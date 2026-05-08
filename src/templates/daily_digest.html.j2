@@ -1,0 +1,21 @@
+📊 <b>Сводка за {{ today_date }}</b>
+
+<b>За сегодня:</b>
+• Собрано: {{ today.total_amount|amount }} ₽
+• Донатов: {{ today.count }}
+• Уникальных: {{ today.unique_donors }}
+{% if fundraiser %}
+{% set percent, bar = progress(fundraiser.current_amount, fundraiser.target_amount) %}
+
+<b>Всего по сбору:</b>
+• {{ fundraiser.current_amount|amount }} ₽ / {{ fundraiser.target_amount|amount }} ₽
+• {{ bar }} {{ percent }}%
+• Осталось: {{ remaining|amount }} ₽
+{% endif %}
+{% if top %}
+
+<b>Топ-3:</b>
+{% for donor in top %}
+{{ loop.index }}. {{ donor.display_name }} — {{ donor.total_amount|amount }} ₽
+{% endfor %}
+{% endif %}

@@ -1,0 +1,10 @@
+💰 <b>Новый донат!</b>
+
+{{ display_name }} задонатил <b>{{ amount_kopecks|amount }} ₽</b>
+{% if rank is not none %}
+🏅 Место в рейтинге: <b>{{ rank }}</b>
+{% endif %}
+{% if comment %}
+
+💬 «{{ comment }}»
+{% endif %}

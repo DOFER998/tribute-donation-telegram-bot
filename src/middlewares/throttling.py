@@ -8,8 +8,6 @@ from aiogram.types import CallbackQuery, Message, TelegramObject
 
 
 class ThrottlingMiddleware(BaseMiddleware):
-    """Один запрос в 0.5 сек на пользователя."""
-
     def __init__(self, rate: float = 0.5) -> None:
         self.rate = rate
         self._last: dict[int, float] = {}

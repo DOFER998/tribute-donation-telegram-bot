@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlmodel import SQLModel
 from testcontainers.postgres import PostgresContainer
 
-import src.database.models  # noqa: F401  - регистрация моделей
+from src.database.models import Donation, Fundraiser
+
+for model in (Donation, Fundraiser):
+    assert model.__tablename__ in SQLModel.metadata.tables
 
 
 @pytest_asyncio.fixture(scope='session', loop_scope='session')

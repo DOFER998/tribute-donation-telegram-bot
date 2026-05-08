@@ -3,7 +3,6 @@ from typing import Annotated
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 from fastapi import APIRouter, Depends, Request, Response
-from loguru import logger
 
 from src.common import BOT_WEBHOOK_PATH
 
@@ -19,9 +18,6 @@ async def telegram_webhook(
     dispatcher: Annotated[Dispatcher, Depends(get_dispatcher)],
 ) -> Response:
     data = await request.json()
-    try:
-        update = Update.model_validate(data, context={'bot': bot})
-        await dispatcher.feed_update(bot, update)
-    except Exception:  # noqa: BLE001
-        logger.exception('Failed to feed update')
+    update = Update.model_validate(data, context={'bot': bot})
+    await dispatcher.feed_update(bot, update)
     return Response(content='OK')
