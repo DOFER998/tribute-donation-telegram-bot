@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +15,7 @@ class DonationRepository:
         self,
         *,
         tribute_donation_request_id: int,
+        tribute_event_created_at: datetime,
         amount: int,
         currency: str = 'rub',
         telegram_user_id: int | None = None,
@@ -21,11 +24,15 @@ class DonationRepository:
         comment: str | None = None,
         is_anonymous: bool = False,
     ) -> Donation | None:
-        """Идемпотентная вставка. Возвращает None если запись уже была."""
+        """Идемпотентная вставка по tribute_event_created_at.
+
+        Возвращает None если запись уже была (retry того же события).
+        """
         stmt = (
             pg_insert(Donation.__table__)
             .values(
                 tribute_donation_request_id=tribute_donation_request_id,
+                tribute_event_created_at=tribute_event_created_at,
                 telegram_user_id=telegram_user_id,
                 username=username,
                 full_name=full_name,
@@ -34,7 +41,7 @@ class DonationRepository:
                 comment=comment,
                 is_anonymous=is_anonymous,
             )
-            .on_conflict_do_nothing(index_elements=['tribute_donation_request_id'])
+            .on_conflict_do_nothing(index_elements=['tribute_event_created_at'])
             .returning(Donation.__table__)
         )
         result = await self.session.execute(stmt)
